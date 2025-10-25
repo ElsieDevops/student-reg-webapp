@@ -1,83 +1,113 @@
-properties([pipelineTriggers([githubPush()])])
-
-node{
-    def mavenHome = tool name: 'maven-3.9.11', type: 'maven'
-    def TomcatSystemIP = "98.84.144.226"
-    def TomcatserverSSHUserName = "ec2-user"
-    try {
-    stage("Git clone") { 
-        git branch: 'development', changelog: true, credentialsId: 'Github_Credentials', poll: true, url: 'https://github.com/ElsieDevops/student-reg-webapp.git'
-     }
-     stage("maven build") {
-         sh "${mavenHome}/bin/mvn clean package"
-     }
-     stage("maven verify and sonar scan") {
-         withCredentials([string(credentialsId: 'SonarToken', variable: 'SonarTokenU')]) {
-             sh """
-             ${mavenHome}/bin/mvn clean verify sonar:sonar -Dsonar.token=${SonarTokenU}
-             """
-            }
-         }
-    stage("maven deploy nexus") {
-        sh "${mavenHome}/bin/mvn clean deploy"
+pipeline {
+    agent any
+    triggers {
+  githubPush()
     }
-    stage("deploy to tomcat") {
-       sshagent(['Tomcat_server_SSHCredentials']) {
-           sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
+    options {
+  buildDiscarder logRotator(numToKeepStr: '5')
+  disableConcurrentBuilds()
+  timeout(time: 10,unit: 'MINUTES')
+ }
+    environment{
+        SONARQUBE_Token = credentials('SonarToken')
+        SONARQUBE_Host = "https://34.201.64.7:9000"
+        TomcatSystemIP = "98.84.144.226"
+        TomcatserverSSHUserName = "ec2-user"
+    }
+    tools {
+        maven "maven-3.9.11"
+    }
+    stages{
+        
+        stage("Git clone"){
+          steps {git branch: 'development', changelog: true, credentialsId: 'Github_Credentials', poll: true, url: 'https://github.com/ElsieDevops/student-reg-webapp.git'}  
+        }
+    
+        stage("Build stage"){
+        steps {
+            sh "mvn clean package"
+        }
+      }
+        stage("Sonar scan"){
+        steps {
+             sh "mvn clean verify sonar:sonar -Dsonar.host=${SONARQUBE_Host} -Dsonar.token=${SONARQUBE_Token}"
+            }
+      }
+        stage("Upload to nexus"){
+        steps {
+              sh "mvn clean deploy"
+            }
+      }
+        stage("deploy to tomcat"){
+        steps {
+            sshagent(['Tomcat_server_SSHCredentials']) {
+              sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
+          }
        }
-     }
-     currentBuild.result = 'SUCCESS'
-  } catch(err) {
-       currentBuild.result = 'FAILURE'
-        echo "Build failed: ${err}"
-  } finally {
-      def buildStatus = currentBuild.result ?: 'SUCCESS'
-        def color = (buildStatus == 'SUCCESS') ? '#28a745' : '#dc3545'
-        def bgColor = (buildStatus == 'SUCCESS') ? '#eafbea' : '#fdecea'
-        def emoji = (buildStatus == 'SUCCESS') ? '✅' : '❌'
-        def title = (buildStatus == 'SUCCESS') ? 'Build Successful!' : 'Build Failed!'
+    }
+  } 
+  post {
+        success {
+            script {
+                def buildStatus = 'SUCCESS'
+                def color = '#28a745'
+                def bgColor = '#eafbea'
+                def emoji = '✅'
+                def title = 'Build Successful!'
 
-        emailext(
-            subject: "${emoji} ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${buildStatus}",
-            body: """
-            <html>
-            <body style="font-family: Arial, sans-serif; color: #222;">
+                emailext(
+                    subject: "${emoji} ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${buildStatus}",
+                    body: """
+                    <html>
+                    <body style="font-family: Arial, sans-serif;">
+                        <div style="border-left: 6px solid ${color}; background-color: ${bgColor}; padding: 15px;">
+                            <h2 style="color:${color};">${emoji} ${title}</h2>
+                            <p><b>Job:</b> ${env.JOB_NAME}</p>
+                            <p><b>Build #:</b> ${env.BUILD_NUMBER}</p>
+                            <p><a href="${env.BUILD_URL}" style="color:#007bff;">View Build</a></p>
+                        </div>
+                    </body>
+                    </html>
+                    """,
+                    to: 'okuelsie@gmail.com',
+                    mimeType: 'text/html'
+                )
+            }
+        }
 
-                <div style="border-left: 6px solid ${color}; background-color: ${bgColor}; padding: 15px;">
-                    <h2 style="color: ${color};">${emoji} ${title}</h2>
-                    <table style="border-collapse: collapse; width: 100%; margin-top: 10px;">
-                        <tr>
-                            <td style="padding: 8px;"><b>Job Name:</b></td>
-                            <td style="padding: 8px;">${env.JOB_NAME}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px;"><b>Build Number:</b></td>
-                            <td style="padding: 8px;">#${env.BUILD_NUMBER}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px;"><b>Status:</b></td>
-                            <td style="padding: 8px; color: ${color}; font-weight: bold;">${buildStatus}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px;"><b>Branch:</b></td>
-                            <td style="padding: 8px;">development</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px;"><b>Build URL:</b></td>
-                            <td style="padding: 8px;"><a href="${env.BUILD_URL}" style="color: #007bff;">View Details</a></td>
-                        </tr>
-                    </table>
+        failure {
+            script {
+                def buildStatus = 'FAILURE'
+                def color = '#dc3545'
+                def bgColor = '#fdecea'
+                def emoji = '❌'
+                def title = 'Build Failed!'
 
-                    <p style="margin-top: 20px;">
-                        For more details, please review the Jenkins console log or SonarQube dashboard.
-                    </p>
-                </div>
+                emailext(
+                    subject: "${emoji} ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${buildStatus}",
+                    body: """
+                    <html>
+                    <body style="font-family: Arial, sans-serif;">
+                        <div style="border-left: 6px solid ${color}; background-color: ${bgColor}; padding: 15px;">
+                            <h2 style="color:${color};">${emoji} ${title}</h2>
+                            <p><b>Job:</b> ${env.JOB_NAME}</p>
+                            <p><b>Build #:</b> ${env.BUILD_NUMBER}</p>
+                            <p><a href="${env.BUILD_URL}" style="color:#007bff;">View Build</a></p>
+                        </div>
+                    </body>
+                    </html>
+                    """,
+                    to: 'okuelsie@gmail.com',
+                    mimeType: 'text/html'
+                )
+            }
+        }
 
-            </body>
-            </html>
-            """,
-            to: 'okuelsie@gmail.com',
-            mimeType: 'text/html'
-        )
-  }
-}
+        always {
+            echo "Cleaning workspace..."
+            cleanWs()
+        }
+    }
+ }
+
+    
