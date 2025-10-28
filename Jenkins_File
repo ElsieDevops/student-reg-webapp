@@ -25,7 +25,11 @@ pipeline {
     
         stage("Build stage"){
         steps {
-            sh "mvn clean package"
+            script {
+                def branchName = scm.branches{0}.name
+                sh "echo building the application ${branchName}" 
+                sh "mvn clean package"
+            }          
         }
       }
         stage("Sonar scan"){
@@ -40,7 +44,7 @@ pipeline {
       }
         stage("deploy war to dev tomcat"){
             when {
-                expression { env.BRANCH_NAME == 'development' }
+                expression { env.BRANCH_NAME == "development" }
             }
         steps {
             sshagent(['Tomcat_server_SSHCredentials']) {
@@ -50,7 +54,7 @@ pipeline {
     }
          stage("deploy to qa tomcat"){
             when {
-                expression { env.BRANCH_NAME == 'qa' }
+                expression { env.BRANCH_NAME == "qa" }
             }
         steps {
             sshagent(['Tomcat_server_SSHCredentials']) {
@@ -60,7 +64,7 @@ pipeline {
     }
         stage("deploy to main tomcat"){
             when {
-                expression { env.BRANCH_NAME == 'main' }
+                expression { env.BRANCH_NAME == "main" }
             }
         steps {
             sshagent(['Tomcat_server_SSHCredentials']) {
