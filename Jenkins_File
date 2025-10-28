@@ -20,11 +20,7 @@ pipeline {
     stages{
         stage("Build stage") {
         steps {
-            script {
-                def branchName = scm.branches{0}.name
-                sh "echo building the application ${branchName}" 
-                sh "mvn clean package"
-            }          
+                sh "mvn clean package"                    
         }
       }
         stage("Sonar scan") {
