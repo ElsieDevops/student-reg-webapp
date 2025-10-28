@@ -12,11 +12,7 @@
 		<java.version>11</java.version>
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
-<<<<<<< HEAD
-		<sonar.host.url>http://13.57.206.25:9000</sonar.host.url>
-=======
 		<sonar.host.url>http://44.220.131.251:9000/</sonar.host.url>
->>>>>>> development
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 		<sonar.sources>src/main/java</sonar.sources>
@@ -28,19 +24,11 @@
     <distributionManagement>
 		<repository>
 			<id>nexus</id>
-<<<<<<< HEAD
-			<url>http://34.224.81.251:8081/repository/student-reg-web/</url>
-		</repository>
-		<snapshotRepository>
-			<id>nexus</id>
-			<url>http://34.224.81.251:8081/repository/student-reg-webapp-snapshot/</url>
-=======
 			<url>http://54.196.134.217:8081/repository/student-reg-web/</url>
 		</repository>
 		<snapshotRepository>
 			<id>nexus</id>
 			<url>http://54.196.134.217:8081/repository/student-reg-webapp-snapshot/</url>
->>>>>>> development
 		</snapshotRepository>
     </distributionManagement>
 

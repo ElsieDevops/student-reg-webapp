@@ -18,7 +18,7 @@ pipeline {
         maven "maven-3.9.11"
     }
     stages{
-        stage("Build stage"){
+        stage("Build stage") {
         steps {
             script {
                 def branchName = scm.branches{0}.name
@@ -27,7 +27,7 @@ pipeline {
             }          
         }
       }
-        stage("Sonar scan"){
+        stage("Sonar scan") {
         steps {
              sh "mvn clean verify sonar:sonar -Dsonar.host=${SONARQUBE_Host} -Dsonar.token=${SONARQUBE_Token}"
             }
