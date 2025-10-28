@@ -10,8 +10,8 @@ pipeline {
  }
     environment{
         SONARQUBE_Token = credentials('SonarToken')
-        SONARQUBE_Host = "https://34.201.64.7:9000"
-        TomcatSystemIP = "98.84.144.226"
+        SONARQUBE_Host = "https://44.220.131.251:9000"
+        TomcatSystemIP = "54.162.157.171"
         TomcatserverSSHUserName = "ec2-user"
     }
     tools {
@@ -39,6 +39,29 @@ pipeline {
             }
       }
         stage("deploy to tomcat"){
+            when {
+                branch 'development'
+            }
+        steps {
+            sshagent(['Tomcat_server_SSHCredentials']) {
+              sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
+          }
+       }
+    }
+         stage("deploy to tomcat"){
+            when {
+                branch 'qa'
+            }
+        steps {
+            sshagent(['Tomcat_server_SSHCredentials']) {
+              sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
+          }
+       }
+    }
+        stage("deploy to tomcat"){
+            when {
+                branch 'main'
+            }
         steps {
             sshagent(['Tomcat_server_SSHCredentials']) {
               sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
