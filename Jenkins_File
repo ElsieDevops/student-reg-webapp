@@ -38,7 +38,7 @@ pipeline {
               sh "mvn clean deploy"
             }
       }
-        stage("deploy to tomcat"){
+        stage("deploy war to dev tomcat"){
             when {
                 branch 'development'
             }
@@ -48,7 +48,7 @@ pipeline {
           }
        }
     }
-         stage("deploy to tomcat"){
+         stage("deploy to qa tomcat"){
             when {
                 branch 'qa'
             }
@@ -58,7 +58,7 @@ pipeline {
           }
        }
     }
-        stage("deploy to tomcat"){
+        stage("deploy to main tomcat"){
             when {
                 branch 'main'
             }
