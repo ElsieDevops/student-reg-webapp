@@ -1,0 +1,140 @@
+pipeline {
+    agent any
+    triggers {
+  githubPush()
+    }
+    options {
+  buildDiscarder logRotator(numToKeepStr: '5')
+  disableConcurrentBuilds()
+  timeout(time: 10,unit: 'MINUTES')
+ }
+    environment{
+        SONARQUBE_Token = credentials('SonarToken')
+        SONARQUBE_Host = "https://44.220.131.251:9000"
+        TomcatSystemIP = "54.162.157.171"
+        TomcatserverSSHUserName = "ec2-user"
+    }
+    tools {
+        maven "maven-3.9.11"
+    }
+    stages{
+        
+        stage("Git clone"){
+          steps {git branch: 'development', changelog: true, credentialsId: 'Github_Credentials', poll: true, url: 'https://github.com/ElsieDevops/student-reg-webapp.git'}  
+        }
+    
+        stage("Build stage"){
+        steps {
+            script {
+                def branchName = scm.branches{0}.name
+                sh "echo building the application ${branchName}" 
+                sh "mvn clean package"
+            }          
+        }
+      }
+        stage("Sonar scan"){
+        steps {
+             sh "mvn clean verify sonar:sonar -Dsonar.host=${SONARQUBE_Host} -Dsonar.token=${SONARQUBE_Token}"
+            }
+      }
+        stage("Upload to nexus"){
+        steps {
+              sh "mvn clean deploy"
+            }
+      }
+        stage("deploy war to dev tomcat"){
+            when {
+                expression { env.BRANCH_NAME == "development" }
+            }
+        steps {
+            sshagent(['Tomcat_server_SSHCredentials']) {
+              sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
+          }
+       }
+    }
+         stage("deploy to qa tomcat"){
+            when {
+                expression { env.BRANCH_NAME == "qa" }
+            }
+        steps {
+            sshagent(['Tomcat_server_SSHCredentials']) {
+              sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
+          }
+       }
+    }
+        stage("deploy to main tomcat"){
+            when {
+                expression { env.BRANCH_NAME == "main" }
+            }
+        steps {
+            sshagent(['Tomcat_server_SSHCredentials']) {
+              sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
+          }
+       }
+    }
+  } 
+  post {
+        success {
+            script {
+                def buildStatus = 'SUCCESS'
+                def color = '#28a745'
+                def bgColor = '#eafbea'
+                def emoji = '✅'
+                def title = 'Build Successful!'
+
+                emailext(
+                    subject: "${emoji} ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${buildStatus}",
+                    body: """
+                    <html>
+                    <body style="font-family: Arial, sans-serif;">
+                        <div style="border-left: 6px solid ${color}; background-color: ${bgColor}; padding: 15px;">
+                            <h2 style="color:${color};">${emoji} ${title}</h2>
+                            <p><b>Job:</b> ${env.JOB_NAME}</p>
+                            <p><b>Build #:</b> ${env.BUILD_NUMBER}</p>
+                            <p><a href="${env.BUILD_URL}" style="color:#007bff;">View Build</a></p>
+                        </div>
+                    </body>
+                    </html>
+                    """,
+                    to: 'okuelsie@gmail.com',
+                    mimeType: 'text/html'
+                )
+            }
+        }
+
+        failure {
+            script {
+                def buildStatus = 'FAILURE'
+                def color = '#dc3545'
+                def bgColor = '#fdecea'
+                def emoji = '❌'
+                def title = 'Build Failed!'
+
+                emailext(
+                    subject: "${emoji} ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${buildStatus}",
+                    body: """
+                    <html>
+                    <body style="font-family: Arial, sans-serif;">
+                        <div style="border-left: 6px solid ${color}; background-color: ${bgColor}; padding: 15px;">
+                            <h2 style="color:${color};">${emoji} ${title}</h2>
+                            <p><b>Job:</b> ${env.JOB_NAME}</p>
+                            <p><b>Build #:</b> ${env.BUILD_NUMBER}</p>
+                            <p><a href="${env.BUILD_URL}" style="color:#007bff;">View Build</a></p>
+                        </div>
+                    </body>
+                    </html>
+                    """,
+                    to: 'okuelsie@gmail.com',
+                    mimeType: 'text/html'
+                )
+            }
+        }
+
+        always {
+            echo "Cleaning workspace..."
+            cleanWs()
+        }
+    }
+ }
+
+    
