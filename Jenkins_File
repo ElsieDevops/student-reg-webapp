@@ -40,7 +40,7 @@ pipeline {
       }
         stage("deploy war to dev tomcat"){
             when {
-                branch 'development'
+                expression { env.BRANCH_NAME == 'development' }
             }
         steps {
             sshagent(['Tomcat_server_SSHCredentials']) {
@@ -50,7 +50,7 @@ pipeline {
     }
          stage("deploy to qa tomcat"){
             when {
-                branch 'qa'
+                expression { env.BRANCH_NAME == 'qa' }
             }
         steps {
             sshagent(['Tomcat_server_SSHCredentials']) {
@@ -60,7 +60,7 @@ pipeline {
     }
         stage("deploy to main tomcat"){
             when {
-                branch 'main'
+                expression { env.BRANCH_NAME == 'main' }
             }
         steps {
             sshagent(['Tomcat_server_SSHCredentials']) {
