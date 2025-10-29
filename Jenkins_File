@@ -10,8 +10,8 @@ pipeline {
  }
     environment{
         SONARQUBE_Token = credentials('SonarToken')
-        SONARQUBE_Host = "https://44.220.131.251:9000"
-        TomcatSystemIP = "54.162.157.171"
+        SONARQUBE_Host = "https://23.22.250.14:9000"
+        TomcatSystemIP = "98.93.250.128"
         TomcatserverSSHUserName = "ec2-user"
     }
     tools {
