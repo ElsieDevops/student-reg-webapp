@@ -2,7 +2,7 @@ properties([pipelineTriggers([githubPush()])])
 
 node{
     def mavenHome = tool name: 'maven-3.9.11', type: 'maven'
-    def TomcatSystemIP = "98.84.144.226"
+    def TomcatSystemIP = "34.203.248.39"
     def TomcatserverSSHUserName = "ec2-user"
     try {
     stage("Git clone") { 
