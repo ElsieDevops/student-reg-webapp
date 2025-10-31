@@ -1,3 +1,4 @@
+@Library('JenkinsSharedLib')_
 pipeline {
     agent any
     triggers {
@@ -10,8 +11,8 @@ pipeline {
  }
     environment{
         SONARQUBE_Token = credentials('SonarToken')
-        SONARQUBE_Host = "https://23.22.250.14:9000"
-        TomcatSystemIP = "98.93.250.128"
+        SONARQUBE_Host = "https://35.175.188.99:9000"
+        TomcatSystemIP = "34.203.248.39"
         TomcatserverSSHUserName = "ec2-user"
     }
     tools {
@@ -67,68 +68,19 @@ pipeline {
               sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
           }
        }
+        stage("Trigger test job") {
+            steps{
+                script{
+                    build wait: false, job: 'student-reg-webapp-testing'
+                }
+            }
+        }
     }
   } 
   post {
-        success {
-            script {
-                def buildStatus = 'SUCCESS'
-                def color = '#28a745'
-                def bgColor = '#eafbea'
-                def emoji = '✅'
-                def title = 'Build Successful!'
-
-                emailext(
-                    subject: "${emoji} ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${buildStatus}",
-                    body: """
-                    <html>
-                    <body style="font-family: Arial, sans-serif;">
-                        <div style="border-left: 6px solid ${color}; background-color: ${bgColor}; padding: 15px;">
-                            <h2 style="color:${color};">${emoji} ${title}</h2>
-                            <p><b>Job:</b> ${env.JOB_NAME}</p>
-                            <p><b>Build #:</b> ${env.BUILD_NUMBER}</p>
-                            <p><a href="${env.BUILD_URL}" style="color:#007bff;">View Build</a></p>
-                        </div>
-                    </body>
-                    </html>
-                    """,
-                    to: 'okuelsie@gmail.com',
-                    mimeType: 'text/html'
-                )
-            }
-        }
-
-        failure {
-            script {
-                def buildStatus = 'FAILURE'
-                def color = '#dc3545'
-                def bgColor = '#fdecea'
-                def emoji = '❌'
-                def title = 'Build Failed!'
-
-                emailext(
-                    subject: "${emoji} ${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${buildStatus}",
-                    body: """
-                    <html>
-                    <body style="font-family: Arial, sans-serif;">
-                        <div style="border-left: 6px solid ${color}; background-color: ${bgColor}; padding: 15px;">
-                            <h2 style="color:${color};">${emoji} ${title}</h2>
-                            <p><b>Job:</b> ${env.JOB_NAME}</p>
-                            <p><b>Build #:</b> ${env.BUILD_NUMBER}</p>
-                            <p><a href="${env.BUILD_URL}" style="color:#007bff;">View Build</a></p>
-                        </div>
-                    </body>
-                    </html>
-                    """,
-                    to: 'okuelsie@gmail.com',
-                    mimeType: 'text/html'
-                )
-            }
-        }
-
         always {
-            echo "Cleaning workspace..."
-            cleanWs()
+            SendEmailNotification(currentBuild.currentResult, "okuelsie@gmail.com")
+        cleanWs()
         }
     }
  }
