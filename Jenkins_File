@@ -2,22 +2,22 @@
 pipeline {
     agent any
     triggers {
-  githubPush()
-    }
+        githubPush()
+     }
     options {
-  buildDiscarder logRotator(numToKeepStr: '5')
-  disableConcurrentBuilds()
-  timeout(time: 10,unit: 'MINUTES')
- }
+        buildDiscarder logRotator(numToKeepStr: '5')
+        disableConcurrentBuilds()
+        timeout(time: 10,unit: 'MINUTES')
+        }
     environment{
         SONARQUBE_Token = credentials('SonarToken')
         SONARQUBE_Host = "https://35.175.188.99:9000"
         TomcatSystemIP = "34.203.248.39"
         TomcatserverSSHUserName = "ec2-user"
-    }
+       }
     tools {
         maven "maven-3.9.11"
-    }
+       }
     stages{
         
         stage("Git clone"){
@@ -39,35 +39,13 @@ pipeline {
               sh "mvn clean deploy"
             }
       }
-        stage("deploy war to dev tomcat"){
-            when {
-                expression { env.BRANCH_NAME == "development" }
-            }
-        steps {
-            sshagent(['Tomcat_server_SSHCredentials']) {
+        stage("deploy war to dev tomcat") {
+         steps {
+         sshagent(['Tomcat_server_SSHCredentials']) {
               sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
           }
-       }
-    }
-         stage("deploy to qa tomcat"){
-            when {
-                expression { env.BRANCH_NAME == "qa" }
-            }
-        steps {
-            sshagent(['Tomcat_server_SSHCredentials']) {
-              sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
-          }
-       }
-    }
-        stage("deploy to main tomcat"){
-            when {
-                expression { env.BRANCH_NAME == "main" }
-            }
-        steps {
-            sshagent(['Tomcat_server_SSHCredentials']) {
-              sh "scp -o StrictHostKeyChecking=no target/student-reg-webapp.war ${TomcatserverSSHUserName}@${TomcatSystemIP}:/opt/tomcat/webapps/student-reg-webapp.war"
-          }
-       }
+        }
+     }
         stage("Trigger test job") {
             steps{
                 script{
@@ -75,14 +53,13 @@ pipeline {
                 }
             }
         }
-    }
-  } 
-  post {
+      } 
+      post {
         always {
             SendEmailNotification(currentBuild.currentResult, "okuelsie@gmail.com")
         cleanWs()
         }
-    }
- }
+      }
+}
 
     
